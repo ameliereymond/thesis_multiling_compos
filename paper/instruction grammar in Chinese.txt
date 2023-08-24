@@ -1,0 +1,27 @@
+[zou] = WALK
+[kan] = LOOK
+[pao] = RUN
+[tiao] = JUMP
+[xiang zuo zhuan] = LTURN
+[xiang you zhuan] = RTURN
+[xiang zuo {u}] = LTURN [{u}]
+[xiang you {u}] = RTURN [{u}]
+[cong zuo xiang hou zhuan] = LTURN LTURN
+[cong you xiang hou zhuan] = RTURN RTURN
+[cong zuo zhuan xiang hou {u}] = [cong zuo xiang hou zhuan] [{u}]
+[cong you zhuan xiang hou {u}] = [cong you xiang hou zhuan] [{u}]
+[xiang zuo zhuan yi quan] = LTURN LTURN LTURN LTURN
+[xiang you zhuan yi quan] = RTURN RTURN RTURN RTURN
+[xiang zuo zhuan {NUM} quan] = [xiang zuo zhuan yi quan] ^ {NUM}
+[xiang zuo {u} yi quan] = LTURN [{u}] LTURN [{u}] LTURN [{u}] LTURN [{u}]
+[xiang you {u} yi quan] = RTURN [{u}] RTURN [{u}] RTURN [{u}] RTURN [{u}]
+[{x} liang ci] = [{x}] [{x}]
+[{x} san ci] = [{x}] [{x}] [{x}]
+[{x1} ran hou {x2}] = [{x1}] [{x2}]
+[{x1}, zhi qian xian {x2}] =  [{x2}] [{x1}]
+
+IMPORTANT NOTES:
+(1) The Chinese grammar isn't as "flexible" in terms of appending position words to verbs; more genrally, position words in this case aren't like normal adverbs. For instance, while "turn[V]" is translated to "zhuan" and "left" to "zuo", in order to say "turn left", you need to say "xiang zuo zhuan", which literally stands for "toward left turn[V]".
+(2) The above situation becomes more complicated when verbs are combined with complicated position words. It needs more complex expressions to convey "turn around/opposite left" in grammatically acceptable ways, which looks like "via left toward opposite turn"; and for "VERB around left/right", there is even no corresponding saying in Chinese. To aid the purpose of the research, I am trying to create understandable-ish phrases that follows compositional rules, and in case this is not working, please let me know and we can figure out.
+(3) There're some new rules ([xiang zuo zhuan {NUM} quan]) because the instruction in Chinese would involve additional rules to work: For "turn around left" in Chinese, it would need to include a numerical number of how many "rounds" to turn (and put in the middle of the phrase), which is by default ONE. That is, "turn around left" would be "xiang zuo zhuan yi quan", literally meaning "toward left turn ONE round". So, to make this work for multiple rounds, it'd need to replace ONE with other numbers. Similarly for "jump around".
+(4) beware of similar-looking but different characters!! e.g. "zuo"(left) and "zou"(walk).

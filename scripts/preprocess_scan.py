@@ -1,9 +1,9 @@
 import re
+import sys
+import os
+from pathlib import Path
 from parse import parser_en
-from translate import translate_EN_FR
-
-SCAN_TEST_FILE = "/Users/amelietamreymond/projects/Master_thesis/data/SCAN_dataset/add_prim_split/tasks_test_addprim_jump.txt"
-TRANSLATED_FILE = "/Users/amelietamreymond/projects/Master_thesis/outputs/test.txt"
+from translate import translate_EN_ZH
 
 def parse_scan_line(line: str):
     [input, output] = re.split(' OUT: ', line)
@@ -21,21 +21,31 @@ def parse(parser, tokens):
 
     if len(tree) != 1:
         sentence = " ".join(tokens)
-        raise Exception(f"wow wow wow too fast you got {len(tree)} items in the sentence '{sentence}'")
+        raise Exception(f"Expected only 1 tree root, but parsed {len(tree)} tree roots in the sentence '{sentence}'")
     
     return tree[0]
 
 def translate_scan_line(line: str) -> str:
     (input, output) = parse_scan_line(line)
     tokens = tokenize(input)
-    tree_en = parse(parser_en, tokens)        
-    tree_fr = translate_EN_FR(tree_en)
-    sentence_fr = " ".join(tree_fr.leaves())
+    tree_en = parse(parser_en, tokens)
+    try:
+        tree_fr = translate_EN_ZH(tree_en)
+    except AssertionError:
+        raise Exception(f"Could not parse tree: {tree_en}")
+    
+    sentence_fr = "".join(tree_fr.leaves()) # TODO add space here if other lang than zh
     return f"IN: {sentence_fr} OUT: {output}"
 
-def main():
-    with open(SCAN_TEST_FILE, 'r') as file_in:
-        with open(TRANSLATED_FILE, 'w') as file_out:
+def translate_scan_file(input_file, output_file):
+    print(f"Translating!")
+    print(f"input: {input_file}")
+    print(f"output: {output_file}")
+
+    os.makedirs(Path(output_file).parent.absolute(), exist_ok=True)
+
+    with open(input_file, 'r') as file_in:
+        with open(output_file, 'w') as file_out:
             i = 0
             for line in file_in.readlines():
                 translated = translate_scan_line(line)
@@ -45,4 +55,7 @@ def main():
                     print(f"Parsed {i} lines")
 
 if __name__ == '__main__':
-    main()
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
+
+    translate_scan_file(input_file, output_file)
