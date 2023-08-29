@@ -7,7 +7,7 @@ from translate import translate_EN_RU, translate_EN_HIN, translate_EN_FR, transl
 
 def parse_scan_line(line: str):
     [input, output] = re.split(' OUT: ', line)
-    input = input[3:]
+    input = input[4:]
     
     # Create generator so that we can have all lines, return tuple of 
     return (input, output)
