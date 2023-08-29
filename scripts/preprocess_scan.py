@@ -3,7 +3,7 @@ import sys
 import os
 from pathlib import Path
 from parse import parser_en
-from translate import translate_EN_ZH
+from translate import translate_EN_RU
 
 def parse_scan_line(line: str):
     [input, output] = re.split(' OUT: ', line)
@@ -30,7 +30,7 @@ def translate_scan_line(line: str) -> str:
     tokens = tokenize(input)
     tree_en = parse(parser_en, tokens)
     try:
-        tree_fr = translate_EN_ZH(tree_en)
+        tree_fr = translate_EN_RU(tree_en)
     except AssertionError:
         raise Exception(f"Could not parse tree: {tree_en}")
     

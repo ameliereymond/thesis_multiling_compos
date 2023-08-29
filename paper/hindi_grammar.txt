@@ -1,0 +1,32 @@
+C -> S aur tab S
+C -> S jiske pehle S
+C -> S 
+S -> do baar V
+S -> teen baar V
+S -> V
+V -> D_2 perche D_1
+V -> D_2 irad girad D_2 
+V -> D 
+V -> U 
+D -> baai U 
+D -> daai U 
+D -> baai mod 
+D -> daai mod 
+U -> chalna 
+U -> dekhna 
+U -> daudana 
+U -> koodana 
+
+----------------
+C -> S AND S | S AFTER S | S 
+S -> TIMES S | V 
+V -> DIR VECTOR ACTION | D | U | DIR VECTOR TURN  
+D -> ACTION | DIR TURN 
+
+ACTION -> 'chalna' | 'dekhna' | 'daudana' | 'koodana'
+TURN -> 'mod' 
+VECTOR -> 'perche' | 'irad girad' 
+DIR -> 'daai' | 'baai' 
+TIMES -> 'do baar' | 'teen baar'  
+AFTER -> 'jiske pehle
+AND -> 'aur tab'

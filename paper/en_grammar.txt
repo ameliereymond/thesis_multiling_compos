@@ -1,0 +1,12 @@
+C -> S AND S | S AFTER S | S
+S -> V TIMES | V
+V -> ACTION VECTOR DIR | TURN VECTOR DIR | D | ACTION
+D -> ACTION DIR | TURN DIR
+
+ACTION -> 'walk' | 'look' | 'run' | 'jump'
+TURN -> 'turn'
+VECTOR -> 'around' | 'opposite'
+DIR -> 'left' | 'right'
+TIMES -> 'twice' | 'thrice'
+AFTER -> 'after'
+AND -> 'and'
