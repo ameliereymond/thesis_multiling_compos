@@ -1,0 +1,5 @@
+{
+    "trainIdxs": [3, 4, 5, 7, 9],
+    "devIdxs": [1],
+    "testIdxs": [8, 2, 6, 0]
+}

@@ -19,9 +19,9 @@ U -> koodana
 
 ----------------
 C -> S AND S | S AFTER S | S 
-S -> TIMES S | V 
-V -> DIR VECTOR ACTION | D | U | DIR VECTOR TURN  
-D -> ACTION | DIR TURN 
+S -> TIMES V | V 
+V -> DIR VECTOR ACTION | D | ACTION | DIR VECTOR TURN  
+D -> DIR ACTION | DIR TURN 
 
 ACTION -> 'chalna' | 'dekhna' | 'daudana' | 'koodana'
 TURN -> 'mod' 
