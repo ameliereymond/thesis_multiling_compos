@@ -83,7 +83,7 @@ def translate_EN_ZH(tree_en: Tree) -> Tree:
     elif label == "D":
         action_or_turn = tree_en[0]
         dir = tree_en[1]
-        return Tree(label, [translate_EN_ZH(action_or_turn), translate_EN_ZH(dir)])
+        return Tree(label, [translate_EN_ZH(dir), translate_EN_ZH(action_or_turn)])
     elif label == "V":
         if len(tree_en) != 3:
             return Tree(label, [translate_EN_ZH(nt) for nt in tree_en])
