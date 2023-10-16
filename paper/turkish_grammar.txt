@@ -1,0 +1,14 @@
+C -> S AND S | S AFTER S | S
+S -> V TIMES | V
+
+
+[[ öbür yöne soldan dön ]] = LTURN LTURN -> öbür yöne   + DIR + dan 
+
+
+ACTION -> 'yürü' | 'bak' | 'koş' | 'zıpla'
+TURN -> 'dön'
+VECTOR -> 'around' | 'opposite'
+DIR -> 'sola' | 'sağa'
+TIMES -> 'iki' 'kere' | 'üç' 'kere'
+AFTER -> 'den sonra'
+AND -> 've'

@@ -25,3 +25,23 @@ IMPORTANT NOTES:
 (2) The above situation becomes more complicated when verbs are combined with complicated position words. It needs more complex expressions to convey "turn around/opposite left" in grammatically acceptable ways, which looks like "via left toward opposite turn"; and for "VERB around left/right", there is even no corresponding saying in Chinese. To aid the purpose of the research, I am trying to create understandable-ish phrases that follows compositional rules, and in case this is not working, please let me know and we can figure out.
 (3) There're some new rules ([xiang zuo zhuan {NUM} quan]) because the instruction in Chinese would involve additional rules to work: For "turn around left" in Chinese, it would need to include a numerical number of how many "rounds" to turn (and put in the middle of the phrase), which is by default ONE. That is, "turn around left" would be "xiang zuo zhuan yi quan", literally meaning "toward left turn ONE round". So, to make this work for multiple rounds, it'd need to replace ONE with other numbers. Similarly for "jump around".
 (4) beware of similar-looking but different characters!! e.g. "zuo"(left) and "zou"(walk).
+
+
+--------------------------------------------------------------------------------------------------------------------------------
+zou	走	"walk"
+kan	看	"look"
+pao	跑	"run"
+tiao	跳	"jump"
+xiang	向	"toward"
+zuo	左	"left"
+you	右	"right"
+hou	后	"behind/opposite"
+zhuan	转	"turn[V]"
+cong	从	"from/via"
+yi	一	"one"
+liang	两	"two"
+san	三	"three"
+quan	圈	"loop/round"
+ci	次	"times(measure word)"
+ran hou	然后	"and then"
+, zhi qian xian	，之前先	", before which first (do)"
