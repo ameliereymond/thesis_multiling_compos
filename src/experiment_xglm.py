@@ -1,9 +1,9 @@
 from experiment import run_experiment, aggregate_scores, dump_logs
 from model import XGLMLocalModel
-
+from transformers import GenerationConfig
 
 def main():
-    model = XGLMLocalModel("facebook/xglm-564M")
+    model = XGLMLocalModel("facebook/xglm-564M", GenerationConfig(max_new_tokens = 150))
     
     logs = run_experiment(
         model,
