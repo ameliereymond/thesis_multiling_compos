@@ -1,0 +1,10 @@
+name: mscan2
+channels:
+  - pytorch
+dependencies:
+  - python=3.10
+  - transformers
+  - nltk
+  - pytorch
+  - sentencepiece
+  - protobuf

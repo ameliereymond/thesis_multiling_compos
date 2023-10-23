@@ -5,13 +5,13 @@
 When you are installing this for the first time, run:
 
 ```bash
-conda create --name mscan --file spec-file.txt
+conda env create --file environment.yaml
 ```
 
 After that, and on every new session, run:
 
 ```bash
-conda activate mscan
+conda activate mscan2
 ```
 
 ## Usage
@@ -31,8 +31,4 @@ python src/inference.py --model-name "bigscience/bloom" --train data/output/en/s
 ## Development
 ### Adding dependencies
 
-Install dependencies with `conda install`. Then, run:
-
-```bash
-conda list --explicit > spec-file.txt
-```
+Add dependencies that you care about to `environment.yml`
