@@ -5,7 +5,7 @@
 When you are installing this for the first time, run:
 
 ```bash
-conda env create --file environment.yaml
+conda env create --file environment.yml
 ```
 
 After that, and on every new session, run:
