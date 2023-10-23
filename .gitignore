@@ -1,5 +1,7 @@
 data/output/
 data/output_backup/
+__MACOSX
+.DS_Store
 data.zip
 
 # Byte-compiled / optimized / DLL files
