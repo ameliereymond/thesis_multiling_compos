@@ -161,7 +161,7 @@ def run_experiment(model: Model,
         print(f"Expected: {expected}")
         print()
         print(scores)
-        print()
+        print(flush=True)
         
         log = {
             "prompt": prompt,

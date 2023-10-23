@@ -1,8 +1,15 @@
 data/output/
 data/output_backup/
+
+# Zip artifacts
 __MACOSX
 .DS_Store
 data.zip
+
+# Condor output
+run.error
+run.log
+run.out
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

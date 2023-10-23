@@ -1,2 +1,5 @@
+#!/bin/bash
+conda init bash
 conda activate mscan
-python src/gpu-test.py
+
+./scripts/run_xglm_inference.sh > run.out
