@@ -1,6 +1,6 @@
 # Readme
 
-## Installation
+## Dependencies
 
 When you are installing this for the first time, run:
 
@@ -14,11 +14,19 @@ After that, and on every new session, run:
 conda activate mscan2
 ```
 
+During development, dependencies that you care about to `environment.yml`. Then run:
+
+```bash
+conda env update --file environment.yml --prune
+```
+
 ## Usage
+
+### Inference scripts
 
 To use the inference scripts, you must first set an environment variable with your Hugging Face token:
 
-```
+```bash
 export HF_TOKEN="hf_..."
 ```
 
@@ -28,7 +36,16 @@ Then, to run an experiment, you can run:
 python src/inference.py --model-name "bigscience/bloom" --train data/output/en/simple/train.txt --test data/output/en/simple/test.txt --output data/output/results/playground/results.json --context-size 2 --num-queries 1
 ```
 
-## Development
-### Adding dependencies
+### Condor
 
-Add dependencies that you care about to `environment.yml`
+Edit `condor-run.sh` with whatever you want to do in the Condor task, then run:
+
+```bash
+condor_submit condor-task.cmd
+```
+
+To see the queue, and see whether your job is running:
+
+```bash
+condor_q 
+```
