@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from huggingface_hub import InferenceApi
 import time
-from transformers import AutoTokenizer, XGLMModel, XGLMConfig
+from transformers import AutoTokenizer, XGLMForCausalLM, GenerationConfig, LlamaTokenizer, LlamaForCausalLM
+import torch
 
 class Model(ABC):
     @abstractmethod
@@ -79,28 +80,37 @@ class HuggingFaceInferenceApiModel(Model):
 class XGLMLocalModel(Model):
     def __init__(self,
                  model_name: str,
-                 max_output_length: int = 20,
-                 top_k: int = 50):
-        '''
-        model_name: HuggingFace pretrained XGLM model name, e.g., facebook/xglm-564M
-        
-        max_output_length: Maximum length that will be used by default in the generate method of the model.
-
-        top_k:      Number of highest probability vocabulary tokens to keep for top-k-filtering
-                    that will be used by default in the generate method of the model.
-        '''
-        self.model_name = model_name
-        self.model = XGLMModel.from_pretrained(model_name)
+                 generation_config: GenerationConfig = GenerationConfig()):
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        self.model = XGLMForCausalLM.from_pretrained(model_name).to(self.device)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        # See https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
+        self.generation_config = generation_config
 
     def infer(self, prompt: str) -> str:
-        input_ids = self.tokenizer.encode(prompt, return_tensors="pt")
-        output = self.model.generate(
-            input_ids,
-            max_length=50,
-            num_return_sequences=1,
-            no_repeat_ngram_size=2,
-            top_k=50)
-        
-        generated_text = self.tokenizer.decode(output[0], skip_special_tokens=True)
-        return generated_text
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        outputs = self.model.generate(
+            **inputs,
+            labels=inputs["input_ids"],
+            generation_config=self.generation_config)
+
+        return self.tokenizer.decode(outputs.tolist()[0], skip_special_tokens=False)
+
+class LlamaLocalModel(Model):
+    def __init__(self,
+                 model_name: str,
+                 generation_config: GenerationConfig = GenerationConfig()):
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        self.model = LlamaForCausalLM.from_pretrained(model_name, token="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").to(self.device)
+        self.tokenizer = LlamaTokenizer.from_pretrained(model_name, token="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")
+        # See https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
+        self.generation_config = generation_config
+
+    def infer(self, prompt: str) -> str:
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        outputs = self.model.generate(
+            **inputs,
+            labels=inputs["input_ids"],
+            generation_config=self.generation_config)
+
+        return self.tokenizer.decode(outputs.tolist()[0], skip_special_tokens=False)

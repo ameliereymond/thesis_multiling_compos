@@ -2,7 +2,7 @@ import sys
 import json
 import os
 from pathlib import Path
-from inference import aggregate_scores
+from experiment import aggregate_scores
 
 if __name__ == "__main__":
     logs_file = sys.argv[1]

@@ -174,7 +174,7 @@ def run_experiment(model: Model,
 
         # Sleep between each query to avoid getting rate limited.
         # Don't sleep if this is the last query.
-        if sleep_between_queries > 0 and i < len(queries) - 1:
+        if sleep_between_queries and i < len(queries) - 1:
             time.sleep(sleep_between_queries)
     
     return logs
