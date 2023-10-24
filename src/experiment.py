@@ -53,9 +53,9 @@ def build_queries(train, test, num_queries, context_size, special_handling = Non
         
         exemplars = sample_train(train, context_size, special_handling)
         exemplars = [markup_example(ex) for ex in exemplars]
-        context = "\n\n".join(exemplars)
+        context = "\n".join(exemplars)
         
-        prompt = context + "\n\n" + question 
+        prompt = context + "\n" + question 
         queries.append((prompt, answer))
     
     return queries
@@ -156,8 +156,8 @@ def run_experiment(model: Model,
 
         scores = compute_scores(expected, actual)
         
+        print(f"Prompt:   {prompt}")
         print(f"Got:      {actual}")
-        print()
         print(f"Expected: {expected}")
         print()
         print(scores)

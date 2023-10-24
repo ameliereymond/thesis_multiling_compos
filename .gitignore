@@ -7,9 +7,12 @@ __MACOSX
 data.zip
 
 # Condor output
-run.error
-run.log
-run.out
+run*.error
+run*.log
+run*.out
+
+# Generated files
+/scripts/generated
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from huggingface_hub import InferenceApi
 import time
+import transformers
 from transformers import AutoTokenizer, XGLMForCausalLM, GenerationConfig, LlamaTokenizer, LlamaForCausalLM
 import torch
 
@@ -100,9 +101,18 @@ class LlamaLocalModel(Model):
     def __init__(self,
                  model_name: str,
                  generation_config: GenerationConfig = GenerationConfig()):
-        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
-        self.model = LlamaForCausalLM.from_pretrained(model_name, token="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").to(self.device)
-        self.tokenizer = LlamaTokenizer.from_pretrained(model_name, token="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")
+        
+        # Create model
+        self.model = LlamaForCausalLM.from_pretrained(model_name, use_auth_token="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")
+
+        # Place model on all available GPUs, and otherwise on CPU
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(self.device)
+
+        # Create tokenizer
+        self.tokenizer = LlamaTokenizer.from_pretrained(model_name, use_auth_token="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")
+        
+        # Store generation config
         # See https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
         self.generation_config = generation_config
 
