@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from huggingface_hub import InferenceApi
 import time
-import transformers
 from transformers import AutoTokenizer, XGLMForCausalLM, GenerationConfig, LlamaTokenizer, LlamaForCausalLM
 import torch
+import requests
 
 class Model(ABC):
     @abstractmethod
@@ -124,3 +124,96 @@ class LlamaLocalModel(Model):
             generation_config=self.generation_config)
 
         return self.tokenizer.decode(outputs.tolist()[0], skip_special_tokens=False)
+
+class OpenAIModel(Model):
+    def __init__(self, 
+                 model_name: str,
+                 api_key: str,
+                 retry_strategy: RetryStrategy):
+        self.api_key = api_key
+        self.model_name = model_name
+        self.retry_strategy = retry_strategy
+
+        completion_style_models = set([
+            "babbage", "text-babbage-001", "davinci", "curie-instruct-beta", "davinci-instruct-beta",
+            "text-davinci-001", "babbage-002", "davinci-002", "text-davinci-002", "fanw-json-eval",
+            "gpt-3.5-turbo-instruct-0914", "ada", "text-ada-001", "gpt-3.5-turbo-instruct",
+            "text-davinci-003", "text-curie-001", "curie"
+        ])
+        
+        chat_completion_style_models = set([
+            "gpt-3.5-turbo-16k-0613", "gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4", "gpt-4-0314",
+            "gpt-3.5-turbo-0613", "gpt-3.5-turbo-0301", "gpt-4-0613"
+        ])
+        
+        if model_name in chat_completion_style_models:
+            self.use_chat_completion = True
+        elif model_name in completion_style_models:
+            self.use_chat_completion = False
+        else:
+            raise Exception(f"Model name '{model_name}' not recognized")
+
+    def infer(self, prompt: str) -> str:
+        return self.retry_strategy.execute_with_retry(lambda: self.infer_without_retry(prompt))
+
+    def infer_without_retry(self, prompt: str) -> str:
+        if self.use_chat_completion:
+            return self.infer_chat_completion_style(prompt)
+        else:
+            return self.infer_completion_style(prompt)
+
+    def infer_chat_completion_style(self, prompt: str) -> str:
+        response = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}"
+            },
+            json = {
+                "model": self.model_name,
+                "messages": [
+
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            }
+        )
+
+        if response.status_code == 200:
+            try:
+                json = response.json()
+                return json["choices"][0]["message"]["content"]
+            except Exception as e:
+                print(e)
+                print(response.text)
+                raise Exception("Error parsing response")
+        else:
+            raise Exception(f"OpenAI returned HTTP {response.status_code} with message {response.json()}")
+        
+
+    def infer_completion_style(self, prompt: str) -> str:
+        response = requests.post(
+            "https://api.openai.com/v1/completions",
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}"
+            },
+            json = {
+                "model": self.model_name,
+                "prompt": prompt
+            }
+        )
+
+        if response.status_code == 200:
+            try:
+                json = response.json()
+                return json["choices"][0]["text"]
+            except Exception as e:
+                print(e)
+                print(response.text)
+                raise Exception("Error parsing response")
+        else:
+            raise Exception(f"OpenAI returned HTTP {response.status_code} with message {response.json()}")
+

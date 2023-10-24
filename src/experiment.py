@@ -65,8 +65,14 @@ def build_queries(train, test, num_queries, context_size, special_handling = Non
 ###########
 
 def compute_exact_match_score(expected, actual):
-    expected = expected.strip().split(" ")
-    actual = actual.strip().split(" ")
+    expected = expected.strip().removesuffix("</s>").split(" ")
+    actual = actual.strip().removesuffix("</s>").split(" ")
+
+    return 1 if actual == expected else 0
+
+def compute_exact_prefix_score(expected, actual):
+    expected = expected.strip().removesuffix("</s>").split(" ")
+    actual = actual.strip().removesuffix("</s>").split(" ")
     
     # If the actual string wasn't able to stop by itself,
     # cut it at the expected length.
@@ -100,6 +106,7 @@ def compute_normalized_edit_distance_score(expected, actual):
 def compute_scores(expected, actual):
     return {
         "exact_match": compute_exact_match_score(expected, actual),
+        "exact_prefix": compute_exact_prefix_score(expected, actual),
         "edit_distance": compute_edit_distance_score(expected, actual),
         "normalized_edit_distance": compute_normalized_edit_distance_score(expected, actual)
     }
@@ -114,12 +121,14 @@ def aggregate_scores(logs):
     scores = [log["scores"] for log in logs]
     
     exact_matches = sum([score["exact_match"] for score in scores])
+    exact_prefixes = sum([score["exact_prefix"] for score in scores])
     avg_edit_distance = avg([score["edit_distance"] for score in scores])
     avg_expected_length = avg([num_instructions(log["expected"]) for log in logs])
     
     return {
         "number_samples": len(logs),
         "sum_exact_matches": exact_matches,
+        "sum_exact_prefixes": exact_prefixes,
         "avg_edit_distance": avg_edit_distance,
         "avg_expected_length": avg_expected_length,
         "edit_distances": [score["edit_distance"] for score in scores]
