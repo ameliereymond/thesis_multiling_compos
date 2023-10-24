@@ -14,7 +14,7 @@ After that, and on every new session, run:
 conda activate mscan2
 ```
 
-During development, dependencies that you care about to `environment.yml`. Then run:
+During development, add dependencies that you care about to `environment.yml`. Then run:
 
 ```bash
 conda env update --file environment.yml --prune
@@ -22,9 +22,9 @@ conda env update --file environment.yml --prune
 
 ## Usage
 
-### Inference scripts
+### Inference on HuggingFace Inference API
 
-To use the inference scripts, you must first set an environment variable with your Hugging Face token:
+Set an environment variable with your Hugging Face token:
 
 ```bash
 export HF_TOKEN="hf_..."
@@ -34,6 +34,14 @@ Then, to run an experiment, you can run:
 
 ```bash
 python src/inference.py --model-name "bigscience/bloom" --train data/output/en/simple/train.txt --test data/output/en/simple/test.txt --output data/output/results/playground/results.json --context-size 2 --num-queries 1
+```
+
+### Inference on OpenAI inference API
+
+Set an environment variable with your HuggingFace token:
+
+```bash
+export OPENAI_API_KEY="sk-..."
 ```
 
 ### Condor

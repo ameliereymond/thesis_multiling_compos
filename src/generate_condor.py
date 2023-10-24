@@ -5,7 +5,8 @@ import os
 import stat
 
 models = ["xglm", "llama"]
-splits = ["mcd1", "mcd2", "mcd3", "add_prim_jump", "add_prim_turn_left", "length_split", "simple"]
+# splits = ["mcd1", "mcd2", "mcd3", "add_prim_jump", "add_prim_turn_left", "length_split", "simple"]
+splits = ["simple", "mcd1", "length_split"]
 langs = ["en", "fr", "cmn", "hin", "ru"]
 
 cmds = []

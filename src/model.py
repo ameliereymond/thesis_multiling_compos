@@ -107,7 +107,7 @@ class LlamaLocalModel(Model):
 
         # Place model on all available GPUs, and otherwise on CPU
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(self.device)
+        self.model = self.model.to(self.device)
 
         # Create tokenizer
         self.tokenizer = LlamaTokenizer.from_pretrained(model_name, use_auth_token="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")
