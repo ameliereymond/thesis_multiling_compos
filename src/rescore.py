@@ -4,17 +4,30 @@ import os
 from pathlib import Path
 from experiment import aggregate_scores
 
-if __name__ == "__main__":
-    logs_file = sys.argv[1]
-    output_file = sys.argv[2]
+def rescore_results_file(results_file: Path, score_file: Path):
+    with open(results_file, 'r') as f:
+        results = json.load(f)
 
-    print(f"Rescoring {logs_file} -> {output_file}")
+    scores = aggregate_scores(results)
 
-    with open(logs_file, 'r') as f:
-        logs = json.load(f)
+    os.makedirs(Path(score_file).parent.absolute(), exist_ok=True)
 
-    scores = aggregate_scores(logs)
-
-    os.makedirs(Path(output_file).parent.absolute(), exist_ok=True)
-    with open(output_file, 'w') as f:
+    with open(score_file, 'w') as f:
         json.dump(scores, f, indent=4)
+
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python rescore.py [folder]")
+        print("Converts all results.json files in the folder to score.json")
+        sys.exit(1)
+
+    logs_folder = sys.argv[1]
+
+    for results_file in Path(logs_folder).rglob('results.json'):
+        results_file = results_file.absolute()
+        score_file = results_file.parent / "score.json"
+        cwd = Path(os.getcwd()).absolute()
+        print(f"Rescoring {results_file.relative_to(cwd)} -> {score_file.relative_to(cwd)}")
+        rescore_results_file(results_file, score_file)
