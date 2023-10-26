@@ -129,7 +129,8 @@ class OpenAIModel(Model):
     def __init__(self, 
                  model_name: str,
                  api_key: str,
-                 retry_strategy: RetryStrategy):
+                 retry_strategy: RetryStrategy,
+                 max_output_tokens: int):
         self.api_key = api_key
         self.model_name = model_name
         self.retry_strategy = retry_strategy
@@ -150,8 +151,13 @@ class OpenAIModel(Model):
             self.use_chat_completion = True
         elif model_name in completion_style_models:
             self.use_chat_completion = False
+            if max_output_tokens > 20:
+                raise Exception("Are you sure you want such a high max_output_tokens? " +
+                                "This might be expensive. Comment out this exception if you're really certain")
         else:
             raise Exception(f"Model name '{model_name}' not recognized")
+        
+        self.max_output_tokens = max_output_tokens
 
     def infer(self, prompt: str) -> str:
         return self.retry_strategy.execute_with_retry(lambda: self.infer_without_retry(prompt))
@@ -171,6 +177,8 @@ class OpenAIModel(Model):
             },
             json = {
                 "model": self.model_name,
+                # The OpenAI default is inf, which is expensive!
+                "max_tokens": self.max_output_tokens,
                 "messages": [
 
                     {
@@ -202,6 +210,9 @@ class OpenAIModel(Model):
             },
             json = {
                 "model": self.model_name,
+                # The OpenAI default is 16, which is low!
+                # BUT these models tend to be expensive...
+                "max_tokens": self.max_output_tokens,
                 "prompt": prompt
             }
         )

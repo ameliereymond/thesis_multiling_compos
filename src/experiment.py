@@ -118,7 +118,7 @@ def num_instructions(answer):
     return len(answer.strip().removesuffix("</s>").split(" "))
 
 def aggregate_scores(logs):
-    scores = [log["scores"] for log in logs]
+    scores = [compute_scores(expected=log["expected"], actual=log["actual"]) for log in logs]
     
     exact_matches = sum([score["exact_match"] for score in scores])
     exact_prefixes = sum([score["exact_prefix"] for score in scores])
