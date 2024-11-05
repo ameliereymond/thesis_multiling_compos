@@ -40,9 +40,8 @@ for model in models:
                 if split == "add_prim_jump" or split == "add_prim_turn_left":
                     special_handling = f"--special-handling {split}"
 
+                f.write("#!/bin/bash\n")
                 f.write(dedent(f"""
-                    #!/bin/bash
-                    
                     #SBATCH --account=clmbr
                     #SBATCH --job-name={model}-{lang}-{split}
                     #SBATCH --partition=gpu-l40
