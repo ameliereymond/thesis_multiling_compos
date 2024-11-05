@@ -58,7 +58,7 @@ for model in models:
 
                     export HF_HOME=/gscratch/clmbr/amelie/.cache
 
-                    python {script_file} \\
+                    python {script_file.absolute()} \\
                         --train {train_data.absolute()} \\
                         --test {test_data.absolute()} \\
                         --output {task_output_file.absolute()} \\
