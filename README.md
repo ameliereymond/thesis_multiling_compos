@@ -22,6 +22,22 @@ conda env update --file environment.yml --prune
 
 ## Usage
 
+### Create split files
+
+The SCAN repo gives us the pre-split data, while the MCD splits give a JSON description of how to split. The following script converts the SCAN splits to the same format as MCD.
+
+```bash
+./scripts/create_split_files.sh
+```
+
+### Preprocess
+
+The following translates the English to various languages, then uses the split JSON descriptions to produces datasets for each (language, split) pair.
+
+```bash
+./scripts/preprocess_all_scan.sh
+```
+
 ### Inference on HuggingFace Inference API
 
 Set an environment variable with your Hugging Face token:
@@ -38,7 +54,7 @@ python src/inference.py --model-name "bigscience/bloom" --train data/output/en/s
 
 ### Inference on OpenAI inference API
 
-Set an environment variable with your HuggingFace token:
+Set an environment variable with your OpenAI token:
 
 ```bash
 export OPENAI_API_KEY="sk-..."
