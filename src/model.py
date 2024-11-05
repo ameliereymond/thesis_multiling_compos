@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from huggingface_hub import InferenceApi
 import time
-from transformers import AutoTokenizer, XGLMForCausalLM, GenerationConfig, LlamaTokenizer, LlamaForCausalLM
+from transformers import AutoTokenizer, XGLMForCausalLM, GenerationConfig, LlamaTokenizer, LlamaForCausalLM, AutoModelForCausalLM
 import torch
 import requests
 
@@ -124,6 +124,41 @@ class LlamaLocalModel(Model):
             generation_config=self.generation_config)
 
         return self.tokenizer.decode(outputs.tolist()[0], skip_special_tokens=False)
+
+class BloomzLocalModel(Model):
+    def __init__(self,
+                 model_name: str,
+                 generation_config: GenerationConfig = None):
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModelForCausalLM.from_pretrained(model_name).to(self.device)
+
+
+        # See https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
+
+        if generation_config is None:
+            self.generation_config = GenerationConfig(
+                max_new_tokens=150,
+                num_return_sequences=1,
+                do_sample=True,
+                top_k=50,
+                top_p=0.95,
+                temperature=1.0
+            )
+        else:
+            self.generation_config = generation_config
+
+    def infer(self, prompt: str) -> str:
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                labels=inputs["input_ids"],
+                generation_config=self.generation_config
+            )
+
+        return self.tokenizer.decode(outputs.tolist()[0], skip_special_tokens=False)
+        
 
 class OpenAIModel(Model):
     def __init__(self, 

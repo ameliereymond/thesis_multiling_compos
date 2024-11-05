@@ -12,7 +12,7 @@ slurm_files = []
 for model in models:
     script_file = Path("src") / f"experiment_{model}.py"
     if not script_file.exists():
-        raise Exception(f"{script_file} does not exist, cannot generate SLURM scripts for it")
+        raise Exception(f"{script_file} does not exist, cannot generate SLURM scripts for it.")
 
     output_folder = Path("scripts") / "generated" / "slurm" / model
     os.makedirs(output_folder.absolute(), exist_ok=True)
@@ -56,7 +56,9 @@ for model in models:
                     conda init bash
                     conda activate thesis
 
-                    python ./src/experiment_{model}.py \\
+                    export HF_HOME=/gscratch/clmbr/amelie/.cache
+
+                    python {script_file} \\
                         --train {train_data.absolute()} \\
                         --test {test_data.absolute()} \\
                         --output {task_output_file.absolute()} \\
