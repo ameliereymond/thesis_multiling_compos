@@ -94,6 +94,9 @@ Then check job status with:
 
 ```bash
 squeue --me
+
+# or, for more information:
+squeue --me -o "%22S %.12i %.45j %.10T %.10M %.30R" --sort="M,j"
 ```
 
 And check job output with e.g.:
