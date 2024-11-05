@@ -7,6 +7,10 @@ import stat
 def assert_exists(file_path: Path):
     if not file_path.exists():
         raise Exception(f"Expected {file_path.absolute()} to exist")
+    
+def chmodx(file_path: Path):
+    st = os.stat(file_path).st_mode
+    os.chmod(submit_all_sh, st | stat.S_IEXEC)
 
 models = ["bloomz"]
 splits = ["mcd1", "mcd2", "mcd3", "add_prim_jump", "add_prim_turn_left", "length_split", "simple"]
@@ -85,6 +89,8 @@ for model in models:
     with open(submit_all_sh, "w") as f:
         for slurm in slurm_files:
             f.write(f"sbatch {slurm}\n")
+    
+    chmodx(submit_all_sh)
 
     rescore_all_sh = output_folder / "rescore-all.sh"
     print(f"Creating {rescore_all_sh.absolute()}")
@@ -92,5 +98,4 @@ for model in models:
         for folder in task_output_folders:
             f.write(f"python {score_file.absolute()} {folder.absolute()}\n")    
 
-    st = os.stat(submit_all_sh).st_mode
-    os.chmod(submit_all_sh, st | stat.S_IEXEC)
+    chmodx(rescore_all_sh)
