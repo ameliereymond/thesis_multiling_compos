@@ -4,6 +4,10 @@ from textwrap import dedent
 import os
 import stat
 
+def assert_exists(file_path: Path):
+    if not file_path.exists():
+        raise Exception(f"Expected {file_path.absolute()} to exist")
+
 models = ["bloomz"]
 splits = ["mcd1", "mcd2", "mcd3", "add_prim_jump", "add_prim_turn_left", "length_split", "simple"]
 langs = ["en", "fr", "cmn", "hin", "ru"]
@@ -11,8 +15,7 @@ langs = ["en", "fr", "cmn", "hin", "ru"]
 slurm_files = []
 for model in models:
     script_file = Path("src") / f"experiment_{model}.py"
-    if not script_file.exists():
-        raise Exception(f"{script_file} does not exist, cannot generate SLURM scripts for it.")
+    assert_exists(script_file)
 
     output_folder = Path("scripts") / "generated" / "slurm" / model
     os.makedirs(output_folder.absolute(), exist_ok=True)
@@ -30,10 +33,13 @@ for model in models:
                 os.makedirs(output_folder.absolute(), exist_ok=True)
 
                 # Determine file locations
-                input_data_folder = Path("data") / "output" / lang / split
+                input_data_folder = Path("data") / "output" / "datasets" / lang / split
                 train_data = input_data_folder / "train.txt"
                 test_data = input_data_folder / "test.txt"
                 task_output_file = task_output_folder / "results.json"
+                
+                assert_exists(train_data)
+                assert_exists(test_data)
                 
                 # Create slurm script for task
                 special_handling = ""
