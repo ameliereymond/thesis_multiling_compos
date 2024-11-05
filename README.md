@@ -73,3 +73,38 @@ To see the queue, and see whether your job is running:
 ```bash
 condor_q 
 ```
+
+### SLURM
+
+Start by generating all SLURM submission scripts
+
+```bash
+python src/generate_slurm.py
+```
+
+#### Run a single job
+
+To run a single SLURM job, do e.g.:
+
+```bash
+sbatch scripts/generated/slurm/bloomz/run-bloomz-en-mcd1.slurm
+```
+
+Then check job status with:
+
+```bash
+squeue --me
+```
+
+And check job output with e.g.:
+
+```bash
+# Replace job ID and task ID below
+cat /mmfs1/gscratch/clmbr/amelie/projects/thesis_multiling_compos/data/output/results/bloomz/en/mcd1/<task_id>_<job_id>.out
+```
+
+#### Run all jobs
+
+```bash
+./scripts/generated/slurm/bloomz/slurm-submit-all.sh
+```

@@ -17,6 +17,9 @@ for model in models:
     script_file = Path("src") / f"experiment_{model}.py"
     assert_exists(script_file)
 
+    score_file = Path("src") / "rescore.py"
+    assert_exists(score_file)
+
     output_folder = Path("scripts") / "generated" / "slurm" / model
     os.makedirs(output_folder.absolute(), exist_ok=True)
 
@@ -36,7 +39,9 @@ for model in models:
                 input_data_folder = Path("data") / "output" / "datasets" / lang / split
                 train_data = input_data_folder / "train.txt"
                 test_data = input_data_folder / "test.txt"
+
                 task_output_file = task_output_folder / "results.json"
+                task_score_file = task_output_folder / "score.json"
                 
                 assert_exists(train_data)
                 assert_exists(test_data)
@@ -68,6 +73,8 @@ for model in models:
                         --test {test_data.absolute()} \\
                         --output {task_output_file.absolute()} \\
                         {special_handling}
+
+                    python {score_file.absolute()} {task_output_file.absolute()} {task_score_file.absolute()}
                 """))
 
     # Create a script that will submit all slurm jobs
