@@ -111,3 +111,13 @@ cat /mmfs1/gscratch/clmbr/amelie/projects/thesis_multiling_compos/data/output/re
 ```bash
 ./scripts/generated/slurm/bloomz/slurm-submit-all.sh
 ```
+
+### Aggregate scores
+
+Once you've run all experiments, you can aggregate scores into a single CSV file for doing further analysis. Run:
+
+```bash
+python src/aggregate_scores.py
+```
+
+This will output a CSV file in `data/output/results/aggregated_scores.csv`.
