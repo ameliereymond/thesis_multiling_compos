@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
 from huggingface_hub import InferenceApi
 import time
-from transformers import AutoTokenizer, XGLMForCausalLM, GenerationConfig, LlamaTokenizer, LlamaForCausalLM, AutoModelForCausalLM
+from transformers import AutoTokenizer, XGLMForCausalLM, GenerationConfig, LlamaTokenizer, LlamaForCausalLM, AutoModelForCausalLM, AutoModelForSeq2SeqLM
 import torch
 import requests
+from accelerate import Accelerator
+
+accelerator = Accelerator()
 
 class Model(ABC):
     @abstractmethod
@@ -82,7 +85,7 @@ class XGLMLocalModel(Model):
     def __init__(self,
                  model_name: str,
                  generation_config: GenerationConfig = GenerationConfig()):
-        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        self.device = accelerator.device
         self.model = XGLMForCausalLM.from_pretrained(model_name).to(self.device)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         # See https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
@@ -106,7 +109,7 @@ class LlamaLocalModel(Model):
         self.model = LlamaForCausalLM.from_pretrained(model_name, use_auth_token="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")
 
         # Place model on all available GPUs, and otherwise on CPU
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = accelerator.device
         self.model = self.model.to(self.device)
 
         # Create tokenizer
@@ -129,7 +132,7 @@ class BloomzLocalModel(Model):
     def __init__(self,
                  model_name: str,
                  generation_config: GenerationConfig = None):
-        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        self.device = accelerator.device
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForCausalLM.from_pretrained(model_name).to(self.device)
 
@@ -158,7 +161,41 @@ class BloomzLocalModel(Model):
             )
 
         return self.tokenizer.decode(outputs.tolist()[0], skip_special_tokens=False)
-        
+
+class AyaLocalModel(Model):
+    def __init__(self,
+                 model_name: str,
+                 generation_config: GenerationConfig = None):
+        self.device = accelerator.device
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, device_map="auto")
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name, device_map="auto")
+
+
+        # See https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
+
+        if generation_config is None:
+            self.generation_config = GenerationConfig(
+                max_new_tokens=150,
+                num_return_sequences=1,
+                do_sample=True,
+                top_k=50,
+                top_p=0.95,
+                temperature=1.0
+            )
+        else:
+            self.generation_config = generation_config
+
+    def infer(self, prompt: str) -> str:
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                labels=inputs["input_ids"],
+                generation_config=self.generation_config
+            )
+
+        return self.tokenizer.decode(outputs.tolist()[0], skip_special_tokens=False)
+
 
 class OpenAIModel(Model):
     def __init__(self, 

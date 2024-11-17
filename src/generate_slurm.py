@@ -12,12 +12,18 @@ def chmodx(file_path: Path):
     st = os.stat(file_path).st_mode
     os.chmod(submit_all_sh, st | stat.S_IEXEC)
 
-models = ["bloomz"]
+models = {
+    "aya": { "gpu_count": 2 },
+    "bloomz": { "gpu_count": 1 },
+    "bloomz-mt": { "gpu_count": 1 },
+    "xglm": { "gpu_count": 1 }
+}
+
 splits = ["mcd1", "mcd2", "mcd3", "add_prim_jump", "add_prim_turn_left", "length_split", "simple"]
 langs = ["en", "fr", "cmn", "hin", "ru"]
 
-for model in models:
-    script_file = Path("src") / f"experiment_{model}.py"
+for model, settings in models.items():
+    script_file = Path("src") / "run_experiment.py"
     assert_exists(script_file)
 
     score_file = Path("src") / "rescore.py"
@@ -64,23 +70,25 @@ for model in models:
                     #SBATCH --partition=gpu-l40
                     #SBATCH --nodes=1
                     #SBATCH --ntasks-per-node=1
-                    #SBATCH --gpus-per-node=1
+                    #SBATCH --gpus-per-node={settings["gpu_count"]}
                     #SBATCH --mem=48G
                     #SBATCH --time=05:00:00
                     #SBATCH -o {task_output_folder.absolute()}/%x_%j.out
 
                     conda init bash
+                    source ~/.bashrc
                     conda activate thesis
 
                     export HF_HOME=/gscratch/clmbr/amelie/.cache
 
-                    python {script_file.absolute()} \\
+                    python3 {script_file.absolute()} \\
+                        --model {model} \\
                         --train {train_data.absolute()} \\
                         --test {test_data.absolute()} \\
                         --output {task_output_file.absolute()} \\
                         {special_handling}
 
-                    python {score_file.absolute()} {task_output_file.absolute()} {task_score_file.absolute()}
+                    python3 {score_file.absolute()} {task_output_file.absolute()} {task_score_file.absolute()}
                 """))
 
     # Create a script that will submit all slurm jobs
