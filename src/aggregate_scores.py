@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 import csv
 
-models = ["bloomz"]
+models = ["aya", "bloomz", "bloomz-mt", "bloom", "xglm", "bloom"] # "llama-3-8B", "llama-3-8B-instruct"]
 splits = ["mcd1", "mcd2", "mcd3", "add_prim_jump", "add_prim_turn_left", "length_split", "simple"]
 langs = ["en", "fr", "cmn", "hin", "ru"]
 
@@ -36,6 +36,6 @@ def write_aggregated_results(output_file: Path):
                 header_written = True
             w.writerow(score)
 
-write_aggregated_results(Path("data") / "output" / "results" / "aggregated_scores.csv")
+    print(f"Wrote aggregated results in {output_file.absolute()}")
 
-                
+write_aggregated_results(Path("data") / "output" / "results" / "aggregated_scores.csv")
