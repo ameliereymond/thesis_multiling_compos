@@ -103,17 +103,23 @@ class XGLMLocalModel(Model):
 class LlamaLocalModel(Model):
     def __init__(self,
                  model_name: str,
-                 generation_config: GenerationConfig = GenerationConfig()):
+                 hf_auth_token: str,
+                 generation_config: GenerationConfig):
         
-        # Create model
-        self.model = LlamaForCausalLM.from_pretrained(model_name, use_auth_token="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")
-
-        # Place model on all available GPUs, and otherwise on CPU
         self.device = accelerator.device
-        self.model = self.model.to(self.device)
 
-        # Create tokenizer
-        self.tokenizer = LlamaTokenizer.from_pretrained(model_name, use_auth_token="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")
+        self.model = LlamaForCausalLM.from_pretrained(
+            model_name,
+            torch_dtype=torch.bfloat16,
+            device_map="auto",
+            use_auth_token=hf_auth_token
+        )
+    
+        self.tokenizer = LlamaTokenizer.from_pretrained(
+            model_name,
+            device_map="auto",
+            use_auth_token=hf_auth_token
+        )
         
         # Store generation config
         # See https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig

@@ -1,9 +1,11 @@
-from model import Model, XGLMLocalModel, AyaLocalModel, BloomLocalModel, BloomzLocalModel
+from model import Model, XGLMLocalModel, AyaLocalModel, BloomLocalModel, BloomzLocalModel, LlamaLocalModel
 from transformers import GenerationConfig
 import argparse
 from experiment import run_experiment, aggregate_scores, dump_logs
+import os
+from dotenv import load_dotenv
 
-MODELS = ["aya", "bloomz", "bloomz-mt", "bloom", "xglm", "bloom"]
+MODELS = ["aya", "bloomz", "bloomz-mt", "bloom", "xglm", "bloom", "llama-3-8B", "llama-3-8B-instruct"]
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run an inference experiment')
@@ -22,6 +24,15 @@ def parse_args():
                         default=None)
     return parser.parse_args()
 
+def get_hf_token():
+    if "HF_TOKEN" not in os.environ:
+        raise Exception("The HF_TOKEN environment variable should be set to a HuggingFace token")
+    
+    if not os.environ["HF_TOKEN"].startswith("hf_"):
+        raise Exception("The HF_TOKEN environment variable is set, but was not recognized as a HuggingFace token (it should start with hf_)")
+        
+    return os.environ["HF_TOKEN"]
+
 
 def get_model(args):
     config = GenerationConfig(max_new_tokens = args.max_output_length)
@@ -38,11 +49,16 @@ def get_model(args):
         return BloomzLocalModel("bigscience/bloomz-7b1-mt", config)
     elif args.model == "xglm":
         return XGLMLocalModel("facebook/xglm-7.5B", config)
+    elif args.model == "llama-3-8B":
+        return LlamaLocalModel("meta-llama/Meta-Llama-3-8B", hf_auth_token=get_hf_token(), generation_config=config)
+    elif args.model == "llama-3-8B-instruct":
+        return LlamaLocalModel("meta-llama/Meta-Llama-3-8B-Instruct", hf_auth_token=get_hf_token(), generation_config=config)
     else:
         raise Exception(f"Model {args.model} is not implemented")
 
 
 if __name__ == "__main__":
+    load_dotenv()
     args = parse_args()
     model = get_model(args)
 

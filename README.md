@@ -46,6 +46,12 @@ Set an environment variable with your Hugging Face token:
 export HF_TOKEN="hf_..."
 ```
 
+Or even better, create a `.env` file with your token (the code will pick it up):
+
+```bash
+HF_TOKEN="hf_..."
+```
+
 Then, to run an experiment, you can run:
 
 ```bash
