@@ -10,10 +10,35 @@ def assert_exists(file_path: Path):
     
 def chmodx(file_path: Path):
     st = os.stat(file_path).st_mode
-    os.chmod(submit_all_sh, st | stat.S_IEXEC)
+    os.chmod(file_path, st | stat.S_IEXEC)
+
+def generate_submit_all_sh(path: Path, slurm_files: list):
+    print(f"Creating {path.absolute()}")
+    with open(path, "w") as f:
+        for slurm in slurm_files:
+            f.write(f"sbatch {slurm}\n")
+    chmodx(path)
+
+def get_python_rescore_command(folder: Path):
+    rescore_py = Path("src") / "rescore.py"
+    assert_exists(rescore_py)
+    return f"python {rescore_py.absolute()} {folder.absolute()}"
+
+def generate_rescore_all(rescore_script_path: Path, results_folder: Path):
+    """
+    Generates a script at rescore_script_path that rescores all results.json files under results_folder
+    """
+
+    print(f"Creating {rescore_script_path.absolute()}")
+    with open(rescore_script_path, "w") as f:
+        f.write("#!/bin/bash\n")
+        f.write(get_python_rescore_command(results_folder))
+    
+    chmodx(rescore_script_path)
 
 models = {
     "aya": { "gpu_count": 2 },
+    "bloom": { "gpu_count": 2 },
     "bloomz": { "gpu_count": 1 },
     "bloomz-mt": { "gpu_count": 1 },
     "xglm": { "gpu_count": 1 }
@@ -22,15 +47,23 @@ models = {
 splits = ["mcd1", "mcd2", "mcd3", "add_prim_jump", "add_prim_turn_left", "length_split", "simple"]
 langs = ["en", "fr", "cmn", "hin", "ru"]
 
+
+script_file = Path("src") / "run_experiment.py"
+assert_exists(script_file)
+
+# Generate a rescore script that will rescore ALL output
+generate_rescore_all(
+    rescore_script_path = Path("scripts") / "generated" / "slurm" / "rescore-all.sh",
+    results_folder = Path("data") / "output" / "results")
+
+
 for model, settings in models.items():
-    script_file = Path("src") / "run_experiment.py"
-    assert_exists(script_file)
-
-    score_file = Path("src") / "rescore.py"
-    assert_exists(score_file)
-
     output_folder = Path("scripts") / "generated" / "slurm" / model
     os.makedirs(output_folder.absolute(), exist_ok=True)
+
+    # Generate script to rescore a single model output
+    model_output_folder = Path("data") / "output" / "results" / model
+    generate_rescore_all(output_folder / "rescore-all.sh", model_output_folder)
 
     # Create all slurm jobs
     slurm_files = []
@@ -88,22 +121,5 @@ for model, settings in models.items():
                         --output {task_output_file.absolute()} \\
                         {special_handling}
 
-                    python3 {score_file.absolute()} {task_output_file.absolute()} {task_score_file.absolute()}
+                    {get_python_rescore_command(task_output_file.parent.absolute())}
                 """))
-
-    # Create a script that will submit all slurm jobs
-    submit_all_sh = output_folder / "slurm-submit-all.sh"
-    print(f"Creating {submit_all_sh.absolute()}")
-    with open(submit_all_sh, "w") as f:
-        for slurm in slurm_files:
-            f.write(f"sbatch {slurm}\n")
-    
-    chmodx(submit_all_sh)
-
-    rescore_all_sh = output_folder / "rescore-all.sh"
-    print(f"Creating {rescore_all_sh.absolute()}")
-    with open(rescore_all_sh, "w") as f:
-        for folder in task_output_folders:
-            f.write(f"python {score_file.absolute()} {folder.absolute()}\n")    
-
-    chmodx(rescore_all_sh)
