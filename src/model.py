@@ -108,22 +108,28 @@ class LlamaLocalModel(Model):
         
         self.device = accelerator.device
 
-        self.model = LlamaForCausalLM.from_pretrained(
+        self.model = AutoModelForCausalLM.from_pretrained(
             model_name,
             torch_dtype=torch.bfloat16,
             device_map="auto",
-            use_auth_token=hf_auth_token
+            token=hf_auth_token
         )
     
-        self.tokenizer = LlamaTokenizer.from_pretrained(
+        self.tokenizer = AutoTokenizer.from_pretrained(
             model_name,
             device_map="auto",
-            use_auth_token=hf_auth_token
+            token=hf_auth_token
         )
         
         # Store generation config
         # See https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
         self.generation_config = generation_config
+
+        # TODO improve this?
+        self.generation_config.eos_token_id = [
+            self.tokenizer.eos_token_id,
+            self.tokenizer.convert_tokens_to_ids("<|eot_id|>")
+        ]
 
     def infer(self, prompt: str) -> str:
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)

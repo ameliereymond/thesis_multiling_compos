@@ -50,9 +50,17 @@ def get_model(args):
     elif args.model == "xglm":
         return XGLMLocalModel("facebook/xglm-7.5B", config)
     elif args.model == "llama-3-8B":
-        return LlamaLocalModel("meta-llama/Meta-Llama-3-8B", hf_auth_token=get_hf_token(), generation_config=config)
+        return LlamaLocalModel(
+            "meta-llama/Meta-Llama-3-8B",
+            hf_auth_token=get_hf_token(),
+            generation_config=config
+        )
     elif args.model == "llama-3-8B-instruct":
-        return LlamaLocalModel("meta-llama/Meta-Llama-3-8B-Instruct", hf_auth_token=get_hf_token(), generation_config=config)
+        return LlamaLocalModel(
+            "meta-llama/Meta-Llama-3-8B-Instruct",
+            hf_auth_token=get_hf_token(),
+            generation_config=config
+        )
     else:
         raise Exception(f"Model {args.model} is not implemented")
 
