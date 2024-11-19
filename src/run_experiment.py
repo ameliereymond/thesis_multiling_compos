@@ -1,9 +1,9 @@
-from model import Model, XGLMLocalModel, AyaLocalModel, BloomzLocalModel
+from model import Model, XGLMLocalModel, AyaLocalModel, BloomLocalModel, BloomzLocalModel
 from transformers import GenerationConfig
 import argparse
 from experiment import run_experiment, aggregate_scores, dump_logs
 
-MODELS = ["aya", "bloomz", "bloomz-mt", "bloom", "xglm"]
+MODELS = ["aya", "bloomz", "bloomz-mt", "bloom", "xglm", "bloom"]
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run an inference experiment')
@@ -24,16 +24,20 @@ def parse_args():
 
 
 def get_model(args):
+    config = GenerationConfig(max_new_tokens = args.max_output_length)
+
     if args.model == "aya":
-        return AyaLocalModel("CohereForAI/aya-101", GenerationConfig(max_new_tokens = args.max_output_length))
-    elif args.model == "bloomz":
-        return BloomzLocalModel("bigscience/bloomz-7b1", GenerationConfig(max_new_tokens = args.max_output_length))
-    elif args.model == "bloomz-mt":
-        return BloomzLocalModel("bigscience/bloomz-7b1-mt", GenerationConfig(max_new_tokens = args.max_output_length))
+        return AyaLocalModel("CohereForAI/aya-101", config)
     elif args.model == "bloom":
-        raise Exception("bloom not supported yet")
+        return BloomLocalModel("bigscience/bloom-7b1", config)
+    elif args.model == "bloomz":
+        # Note: bloomz, not bloom!
+        return BloomzLocalModel("bigscience/bloomz-7b1", config)
+    elif args.model == "bloomz-mt":
+        # Note: bloomz-mt, not bloomz!
+        return BloomzLocalModel("bigscience/bloomz-7b1-mt", config)
     elif args.model == "xglm":
-        return XGLMLocalModel("facebook/xglm-7.5B", GenerationConfig(max_new_tokens = args.max_output_length))
+        return XGLMLocalModel("facebook/xglm-7.5B", config)
     else:
         raise Exception(f"Model {args.model} is not implemented")
 

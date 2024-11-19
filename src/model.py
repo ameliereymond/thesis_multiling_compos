@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from huggingface_hub import InferenceApi
 import time
-from transformers import AutoTokenizer, XGLMForCausalLM, GenerationConfig, LlamaTokenizer, LlamaForCausalLM, AutoModelForCausalLM, AutoModelForSeq2SeqLM
+from transformers import AutoTokenizer, XGLMForCausalLM, GenerationConfig, LlamaTokenizer, LlamaForCausalLM, AutoModelForCausalLM, AutoModelForSeq2SeqLM, BloomForCausalLM
 import torch
 import requests
 from accelerate import Accelerator
@@ -131,25 +131,11 @@ class LlamaLocalModel(Model):
 class BloomzLocalModel(Model):
     def __init__(self,
                  model_name: str,
-                 generation_config: GenerationConfig = None):
+                 generation_config: GenerationConfig):
         self.device = accelerator.device
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(model_name).to(self.device)
-
-
-        # See https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
-
-        if generation_config is None:
-            self.generation_config = GenerationConfig(
-                max_new_tokens=150,
-                num_return_sequences=1,
-                do_sample=True,
-                top_k=50,
-                top_p=0.95,
-                temperature=1.0
-            )
-        else:
-            self.generation_config = generation_config
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, device_map="auto")
+        self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto")
+        self.generation_config = generation_config
 
     def infer(self, prompt: str) -> str:
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
@@ -196,6 +182,27 @@ class AyaLocalModel(Model):
 
         return self.tokenizer.decode(outputs.tolist()[0], skip_special_tokens=False)
 
+
+class BloomLocalModel(Model):
+    def __init__(self,
+                 model_name: str,
+                 generation_config: GenerationConfig):
+        self.device = accelerator.device
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, device_map="auto")
+        self.model = BloomForCausalLM.from_pretrained(model_name, device_map="auto")
+        self.generation_config = generation_config
+
+    def infer(self, prompt: str) -> str:
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                labels=inputs["input_ids"],
+                **self.generation_config.to_dict()
+            )
+
+        return self.tokenizer.decode(outputs.tolist()[0], skip_special_tokens=False)
+        
 
 class OpenAIModel(Model):
     def __init__(self, 
