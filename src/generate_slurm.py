@@ -15,6 +15,7 @@ def chmodx(file_path: Path):
 def generate_submit_all_sh(path: Path, slurm_files: list):
     print(f"Creating {path.absolute()}")
     with open(path, "w") as f:
+        f.write("#!/bin/bash\n")
         for slurm in slurm_files:
             f.write(f"sbatch {slurm}\n")
     chmodx(path)
@@ -41,6 +42,8 @@ models = {
     "bloom": { "gpu_count": 2 },
     "bloomz": { "gpu_count": 1 },
     "bloomz-mt": { "gpu_count": 1 },
+    "llama-3-8B": { "gpu_count": 1 },
+    "llama-3-8B-instruct": { "gpu_count": 1 },
     "xglm": { "gpu_count": 1 }
 }
 
@@ -58,26 +61,26 @@ generate_rescore_all(
 
 
 for model, settings in models.items():
-    output_folder = Path("scripts") / "generated" / "slurm" / model
-    os.makedirs(output_folder.absolute(), exist_ok=True)
+    script_folder = Path("scripts") / "generated" / "slurm" / model
+    os.makedirs(script_folder.absolute(), exist_ok=True)
 
     # Generate script to rescore a single model output
     model_output_folder = Path("data") / "output" / "results" / model
-    generate_rescore_all(output_folder / "rescore-all.sh", model_output_folder)
+    generate_rescore_all(script_folder / "rescore-all.sh", model_output_folder)
 
     # Create all slurm jobs
     slurm_files = []
     task_output_folders = []
     for lang in langs:
         for split in splits:
-            slurm_file = output_folder / f"run-{model}-{lang}-{split}.slurm"
+            slurm_file = script_folder / f"run-{model}-{lang}-{split}.slurm"
             slurm_files.append(slurm_file.absolute())
 
             print(f"Creating {slurm_file.absolute()}")
             with open(slurm_file, "w") as f:
                 # Create output folder for task
                 task_output_folder = Path("data") / "output" / "results" / model / lang / split
-                os.makedirs(output_folder.absolute(), exist_ok=True)
+                os.makedirs(task_output_folder.absolute(), exist_ok=True)
                 task_output_folders.append(task_output_folder)
 
                 # Determine file locations
@@ -123,3 +126,5 @@ for model, settings in models.items():
 
                     {get_python_rescore_command(task_output_file.parent.absolute())}
                 """))
+    
+    generate_submit_all_sh(script_folder / "slurm-submit-all.sh", slurm_files)
