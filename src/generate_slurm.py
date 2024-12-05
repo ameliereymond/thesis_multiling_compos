@@ -1,8 +1,6 @@
-import os
 from pathlib import Path
 from textwrap import dedent
-import os
-from utils import assert_exists, chmodx
+from utils import assert_exists, chmodx, mkdirp
 from common import MODELS, LANGUAGES, SPLITS, STRATEGIES, VERSIONS
 
 RESCORE_PY = Path("src") / "rescore.py"
@@ -27,6 +25,8 @@ def generate_rescore_all(rescore_script_path: Path, results_folder: Path):
     Generates a script at rescore_script_path that rescores all results.json files under results_folder
     """
 
+    mkdirp(rescore_script_path.parent)
+
     print(f"Creating {rescore_script_path.absolute()}")
     with open(rescore_script_path, "w") as f:
         f.write("#!/bin/bash\n")
@@ -43,7 +43,7 @@ generate_rescore_all(
 
 for model, settings in MODELS.items():
     script_folder = Path("scripts") / "generated" / "slurm" / model
-    os.makedirs(script_folder, exist_ok=True)
+    mkdirp(script_folder)
 
     # Generate script to rescore a single model output
     model_output_folder = Path("data") / "output" / "results" / model
@@ -69,7 +69,7 @@ for model, settings in MODELS.items():
 
                         # Create output folder for task
                         task_output_folder = Path("data") / "output" / "results" / model / lang / split / strategy / version
-                        os.makedirs(task_output_folder, exist_ok=True)
+                        mkdirp(task_output_folder)
                         task_output_folders.append(task_output_folder)
 
                         # Determine output locations
