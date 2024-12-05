@@ -20,7 +20,7 @@ MODELS = {
     "bloom": { "gpu_count": 2 },
     "bloomz": { "gpu_count": 1 },
     "bloomz-mt": { "gpu_count": 1 },
-    "llama-3-8B": { "gpu_count": 1 },
-    "llama-3-8B-instruct": { "gpu_count": 1 },
+    "llama-3-8B": { "gpu_count": 2 },
+    "llama-3-8B-instruct": { "gpu_count": 2 },
     "xglm": { "gpu_count": 1 }
 }
