@@ -139,28 +139,20 @@ def aggregate_scores(logs):
 ##############
 
 def run_experiment(model: Model,
-                   train_file: str,
-                   test_file: str,
-                   num_queries: int,
-                   context_size: int,
-                   special_handling: str = None,
+                   prompts_file: Path,
                    sleep_between_queries: float = 0):
     
-    with open(train_file, "r") as f:
-        train = f.read().splitlines()
-
-    with open(test_file, "r") as f:
-        test = f.read().splitlines()
-
-    logs = []
-    queries = build_queries(train,
-                            test,
-                            num_queries=num_queries,
-                            context_size=context_size,
-                            special_handling=special_handling)
+    with open(prompts_file, "r") as f:
+        prompts = json.load(f)
     
-    for i, (prompt, expected) in enumerate(queries):
-        print(f"Testing example {i + 1} / {num_queries}")
+    logs = []
+    
+    for i, item in enumerate(prompts):
+        print(f"Testing example {i + 1} / {len(prompts)}")
+
+        prompt = item["prompt"]
+        expected = item["expected_answer"]
+
         actual = model.infer(prompt)
 
         scores = compute_scores(expected, actual)
@@ -183,7 +175,7 @@ def run_experiment(model: Model,
 
         # Sleep between each query to avoid getting rate limited.
         # Don't sleep if this is the last query.
-        if sleep_between_queries and i < len(queries) - 1:
+        if sleep_between_queries and i < len(prompts) - 1:
             time.sleep(sleep_between_queries)
     
     return logs

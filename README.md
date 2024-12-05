@@ -38,6 +38,14 @@ The following translates the English to various languages, then uses the split J
 ./scripts/preprocess_all_scan.sh
 ```
 
+### Generate prompts
+
+For each language and split, we can generate a bunch of few-shot prompts:
+
+```bash
+python src/generate_prompts.py
+```
+
 ### Inference on HuggingFace Inference API
 
 Set an environment variable with your Hugging Face token:

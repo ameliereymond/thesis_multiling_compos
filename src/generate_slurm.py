@@ -2,15 +2,14 @@ import os
 from pathlib import Path
 from textwrap import dedent
 import os
-import stat
+from utils import assert_exists, chmodx
+from common import MODELS, LANGUAGES, SPLITS, STRATEGIES, VERSIONS
 
-def assert_exists(file_path: Path):
-    if not file_path.exists():
-        raise Exception(f"Expected {file_path.absolute()} to exist")
-    
-def chmodx(file_path: Path):
-    st = os.stat(file_path).st_mode
-    os.chmod(file_path, st | stat.S_IEXEC)
+RESCORE_PY = Path("src") / "rescore.py"
+RUN_EXPERIMENT_PY = Path("src") / "run_experiment.py"
+
+assert_exists(RUN_EXPERIMENT_PY)
+assert_exists(RESCORE_PY)
 
 def generate_submit_all_sh(path: Path, slurm_files: list):
     print(f"Creating {path.absolute()}")
@@ -21,9 +20,7 @@ def generate_submit_all_sh(path: Path, slurm_files: list):
     chmodx(path)
 
 def get_python_rescore_command(folder: Path):
-    rescore_py = Path("src") / "rescore.py"
-    assert_exists(rescore_py)
-    return f"python {rescore_py.absolute()} {folder.absolute()}"
+    return f"python {RESCORE_PY.absolute()} {folder.absolute()}"
 
 def generate_rescore_all(rescore_script_path: Path, results_folder: Path):
     """
@@ -37,22 +34,6 @@ def generate_rescore_all(rescore_script_path: Path, results_folder: Path):
     
     chmodx(rescore_script_path)
 
-models = {
-    "aya": { "gpu_count": 2 },
-    "bloom": { "gpu_count": 2 },
-    "bloomz": { "gpu_count": 1 },
-    "bloomz-mt": { "gpu_count": 1 },
-    "llama-3-8B": { "gpu_count": 1 },
-    "llama-3-8B-instruct": { "gpu_count": 1 },
-    "xglm": { "gpu_count": 1 }
-}
-
-splits = ["mcd1", "mcd2", "mcd3", "add_prim_jump", "add_prim_turn_left", "length_split", "simple"]
-langs = ["en", "fr", "cmn", "hin", "ru"]
-
-
-script_file = Path("src") / "run_experiment.py"
-assert_exists(script_file)
 
 # Generate a rescore script that will rescore ALL output
 generate_rescore_all(
@@ -60,9 +41,9 @@ generate_rescore_all(
     results_folder = Path("data") / "output" / "results")
 
 
-for model, settings in models.items():
+for model, settings in MODELS.items():
     script_folder = Path("scripts") / "generated" / "slurm" / model
-    os.makedirs(script_folder.absolute(), exist_ok=True)
+    os.makedirs(script_folder, exist_ok=True)
 
     # Generate script to rescore a single model output
     model_output_folder = Path("data") / "output" / "results" / model
@@ -71,60 +52,55 @@ for model, settings in models.items():
     # Create all slurm jobs
     slurm_files = []
     task_output_folders = []
-    for lang in langs:
-        for split in splits:
-            slurm_file = script_folder / f"run-{model}-{lang}-{split}.slurm"
-            slurm_files.append(slurm_file.absolute())
+    for lang in LANGUAGES:
+        for split in SPLITS:
+            for strategy in STRATEGIES:
+                for version in VERSIONS.keys():
+                    run_id = f"{model}-{lang}-{split}-{strategy}-{version}"
+                    
+                    slurm_file = script_folder / f"run-{run_id}.slurm"
+                    slurm_files.append(slurm_file.absolute())
+                    
+                    print(f"Creating {slurm_file.absolute()}")
+                    with open(slurm_file, "w") as f:
+                        # Check if input file exists
+                        prompts_file = Path("data") / "output" / "prompts" / lang / split / strategy / version / "prompts.json"
+                        assert_exists(prompts_file)
 
-            print(f"Creating {slurm_file.absolute()}")
-            with open(slurm_file, "w") as f:
-                # Create output folder for task
-                task_output_folder = Path("data") / "output" / "results" / model / lang / split
-                os.makedirs(task_output_folder.absolute(), exist_ok=True)
-                task_output_folders.append(task_output_folder)
+                        # Create output folder for task
+                        task_output_folder = Path("data") / "output" / "results" / model / lang / split / strategy / version
+                        os.makedirs(task_output_folder, exist_ok=True)
+                        task_output_folders.append(task_output_folder)
 
-                # Determine file locations
-                input_data_folder = Path("data") / "output" / "datasets" / lang / split
-                train_data = input_data_folder / "train.txt"
-                test_data = input_data_folder / "test.txt"
+                        # Determine output locations
+                        task_output_file = task_output_folder / "results.json"
+                        task_score_file = task_output_folder / "score.json"
 
-                task_output_file = task_output_folder / "results.json"
-                task_score_file = task_output_folder / "score.json"
-                
-                assert_exists(train_data)
-                assert_exists(test_data)
-                
-                # Create slurm script for task
-                special_handling = ""
-                if split == "add_prim_jump" or split == "add_prim_turn_left":
-                    special_handling = f"--special-handling {split}"
+                        # Write slurm file contents
+                        f.write("#!/bin/bash\n")
+                        f.write(dedent(f"""
+                            #SBATCH --account=clmbr
+                            #SBATCH --job-name={run_id}
+                            #SBATCH --partition=gpu-l40
+                            #SBATCH --nodes=1
+                            #SBATCH --ntasks-per-node=1
+                            #SBATCH --gpus-per-node={settings["gpu_count"]}
+                            #SBATCH --mem=48G
+                            #SBATCH --time=05:00:00
+                            #SBATCH -o {task_output_folder.absolute()}/%x_%j.out
 
-                f.write("#!/bin/bash\n")
-                f.write(dedent(f"""
-                    #SBATCH --account=clmbr
-                    #SBATCH --job-name={model}-{lang}-{split}
-                    #SBATCH --partition=gpu-l40
-                    #SBATCH --nodes=1
-                    #SBATCH --ntasks-per-node=1
-                    #SBATCH --gpus-per-node={settings["gpu_count"]}
-                    #SBATCH --mem=48G
-                    #SBATCH --time=05:00:00
-                    #SBATCH -o {task_output_folder.absolute()}/%x_%j.out
+                            conda init bash
+                            source ~/.bashrc
+                            conda activate thesis
 
-                    conda init bash
-                    source ~/.bashrc
-                    conda activate thesis
+                            export HF_HOME=/gscratch/clmbr/amelie/.cache
 
-                    export HF_HOME=/gscratch/clmbr/amelie/.cache
+                            python3 {RUN_EXPERIMENT_PY.absolute()} \\
+                                --prompts-file {prompts_file.absolute()} \\
+                                --model {model} \\
+                                --output {task_output_file.absolute()}
 
-                    python3 {script_file.absolute()} \\
-                        --model {model} \\
-                        --train {train_data.absolute()} \\
-                        --test {test_data.absolute()} \\
-                        --output {task_output_file.absolute()} \\
-                        {special_handling}
-
-                    {get_python_rescore_command(task_output_file.parent.absolute())}
-                """))
+                            {get_python_rescore_command(task_output_file.parent.absolute())}
+                        """))
     
     generate_submit_all_sh(script_folder / "slurm-submit-all.sh", slurm_files)
