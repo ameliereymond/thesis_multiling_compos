@@ -40,6 +40,7 @@ generate_rescore_all(
     rescore_script_path = Path("scripts") / "generated" / "slurm" / "rescore-all.sh",
     results_folder = Path("data") / "output" / "results")
 
+all_submit_alls = []
 
 for model, settings in MODELS.items():
     script_folder = Path("scripts") / "generated" / "slurm" / model
@@ -76,12 +77,14 @@ for model, settings in MODELS.items():
                         task_output_file = task_output_folder / "results.json"
                         task_score_file = task_output_folder / "score.json"
 
+                        PARTITION = "ckpt-g2"
+
                         # Write slurm file contents
                         f.write("#!/bin/bash\n")
                         f.write(dedent(f"""
                             #SBATCH --account=clmbr
                             #SBATCH --job-name={run_id}
-                            #SBATCH --partition=gpu-l40
+                            #SBATCH --partition={PARTITION}
                             #SBATCH --nodes=1
                             #SBATCH --ntasks-per-node=1
                             #SBATCH --gpus-per-node={settings["gpu_count"]}
@@ -103,4 +106,11 @@ for model, settings in MODELS.items():
                             {get_python_rescore_command(task_output_file.parent.absolute())}
                         """))
     
-    generate_submit_all_sh(script_folder / "slurm-submit-all.sh", slurm_files)
+    submit_all_sh = script_folder / "slurm-submit-all.sh"
+    generate_submit_all_sh(submit_all_sh, slurm_files)
+    all_submit_alls.append(submit_all_sh)
+
+with open(Path("scripts") / "generated" / "slurm" / "submit-all-models.sh", "w") as f:
+    f.write("#!/bin/bash\n")
+    for sh_file in all_submit_alls:
+        f.write(f"{sh_file}\n")
