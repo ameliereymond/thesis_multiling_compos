@@ -22,6 +22,8 @@ def get_scores():
                                     "model": model,
                                     "lang": lang,
                                     "split": split,
+                                    "strategy": strategy,
+                                    "version": version,
                                     "number_samples": data["number_samples"],
                                     "sum_exact_matches": data["sum_exact_matches"],
                                     "sum_exact_prefixes": data["sum_exact_prefixes"],
