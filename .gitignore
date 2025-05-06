@@ -1,5 +1,6 @@
 data/output/
 data/output_backup/
+/tmp
 
 # Zip artifacts
 __MACOSX
