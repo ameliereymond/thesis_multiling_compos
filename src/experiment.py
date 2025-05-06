@@ -6,6 +6,9 @@ from pathlib import Path
 import nltk
 import time
 from preprocess_scan import parse_scan_line
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+from rouge_score import rouge_scorer 
+import sacrebleu
 
 #############
 # DATA LOAD #
@@ -102,13 +105,57 @@ def compute_normalized_edit_distance_score(expected, actual):
         actual = actual[:len(expected)]
         
     return nltk.edit_distance(actual, expected) / len(expected)
-    
+
+def compute_bleu_score(expected, actual):
+    smoothing = SmoothingFunction()
+    expected = [expected.strip().removesuffix("</s>").split(" ")] 
+    actual = actual.strip().removesuffix("</s>").split(" ")  
+    return sacrebleu.sentence_bleu(expected, actual, smoothing_function=smoothing.method1)
+
+# def compute_ter_score(expected, actual):
+#     expected = expected.strip().removesuffix("</s>").strip()
+#     actual = actual.strip().removesuffix("</s>").strip()
+#     return sacrebleu.sentence_ter(actual, [expected]).score
+
+
+# Initialize ROUGE scorer
+rouge = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True) 
+
+from rouge_score import rouge_scorer
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+import sacrebleu
+
+# Initialize ROUGE scorer
+rouge = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+
+# Compute BLEU Score
+def compute_bleu_score(expected, actual):
+    smoothing = SmoothingFunction()
+    expected = [expected.strip().removesuffix("</s>").split(" ")]  # Reference as list of tokens
+    actual = actual.strip().removesuffix("</s>").split(" ")  # Hypothesis as tokens
+    return sentence_bleu(expected, actual, smoothing_function=smoothing.method1)
+
+# Compute ROUGE Scores
+def compute_rouge_scores(expected, actual):
+    expected = expected.strip().removesuffix("</s>")
+    actual = actual.strip().removesuffix("</s>")
+    scores = rouge.score(expected, actual)
+    return {
+        "rouge1": scores['rouge1'].fmeasure,
+        "rouge2": scores['rouge2'].fmeasure,
+        "rougeL": scores['rougeL'].fmeasure,
+    }
+
+
 def compute_scores(expected, actual):
     return {
         "exact_match": compute_exact_match_score(expected, actual),
         "exact_prefix": compute_exact_prefix_score(expected, actual),
         "edit_distance": compute_edit_distance_score(expected, actual),
-        "normalized_edit_distance": compute_normalized_edit_distance_score(expected, actual)
+        "normalized_edit_distance": compute_normalized_edit_distance_score(expected, actual),
+        "nltk_bleu": compute_bleu_score(expected, actual),
+        #"ter": compute_ter_score(expected, actual),
+        **compute_rouge_scores(expected, actual),
     }
 
 def avg(lst):
@@ -124,14 +171,29 @@ def aggregate_scores(logs):
     exact_prefixes = sum([score["exact_prefix"] for score in scores])
     avg_edit_distance = avg([score["edit_distance"] for score in scores])
     avg_expected_length = avg([num_instructions(log["expected"]) for log in logs])
-    
+    avg_bleu = avg([score["nltk_bleu"] for score in scores])
+    avg_rouge1 = avg([score["rouge1"] for score in scores])
+    avg_rouge2 = avg([score["rouge2"] for score in scores])
+    avg_rougeL = avg([score["rougeL"] for score in scores])
+    #avg_ter = avg([score["ter"] for score in scores])
+
     return {
         "number_samples": len(logs),
         "sum_exact_matches": exact_matches,
         "sum_exact_prefixes": exact_prefixes,
         "avg_edit_distance": avg_edit_distance,
         "avg_expected_length": avg_expected_length,
-        "edit_distances": [score["edit_distance"] for score in scores]
+        "avg_bleu": avg_bleu, 
+        "avg_rouge1": avg_rouge1, 
+        "avg_rouge2": avg_rouge2, 
+        "avg_rougeL": avg_rougeL, 
+        #"avg_ter": avg_ter,
+        "edit_distances": [score["edit_distance"] for score in scores],        
+        "bleu_scores": [score["nltk_bleu"] for score in scores],
+        #"ter_scores": [score["ter"] for score in scores],
+        "rouge1_scores": [score["rouge1"] for score in scores],
+        "rouge2_scores": [score["rouge2"] for score in scores],
+        "rougeL_scores": [score["rougeL"] for score in scores],
     }
 
 ##############
