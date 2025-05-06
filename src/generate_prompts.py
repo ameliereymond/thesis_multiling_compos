@@ -45,61 +45,110 @@ def sample_train(train, n, special_handling):
     else:
         return random.sample(train, n)
 
+
+class FewShotPrompt:
+    def __init__(self, instructions: List[str], examples: List[Tuple[str, str]], test_question: str):
+        if len(instructions) > 2:
+            raise Exception("not implemented, only supports 0, 1 or 2 instructions")
+        
+        self.instructions = instructions
+        self.examples = examples
+        self.test_question = test_question
+    
+    def markdown_instructions(self):
+        dev = ""
+        if len(self.instructions) > 0:
+            dev += "# Instructions\n\n"
+            for instr in self.instructions:
+                dev += f"* {instr}\n"
+            dev += "\n"
+
+        dev += "# Examples\n"
+        for i, (question, answer) in enumerate(self.examples):
+            dev += f'\n<user_query id="query_{i}\">\n'
+            dev += question
+            dev += "\n</user_query>\n"
+            dev += f'\n<assistant_response id="query_{i}\">\n'
+            dev += answer
+            dev += "\n</assistant_response>\n"
+
+        return dev
+
+    def to_openai_format(self):
+        return [
+            { "role": "developer", "content": self.markdown_instructions() },
+            { "role": "user", "content": self.test_question },
+        ]
+    
+    def to_llama_format(self):
+        return [
+            { "role": "system", "content": self.markdown_instructions() },
+            { "role": "user", "content": self.test_question },
+        ]
+
+    def to_string_format(self):
+        res = f"<s> "
+        if len(self.instructions) >= 1:
+            res += self.instructions[0]
+            res += "\n\n"
+        
+        res += f"\n\n".join([f"Command: {question}\nActions: {answer}" for (question, answer) in self.examples])
+        res += f"\n\n"
+
+        if len(self.instructions) >= 2:
+            res += self.instructions[1]
+            res += "\n\n"
+
+        res += f"Command: {self.test_question}\n"
+        res += f"Actions: "
+        
+        return res
+
 def generate_prompt(
         strategy: str,
         context: List[Tuple[str , str]], # list of (q, a)
         test_question: str):
     
     if strategy == "basic":
-        context_lines = [f"<s> IN: {question} OUT: {answer} </s>" for (question, answer) in context]
-        final = f"<s> IN: {test_question} OUT: "
-        return "\n".join(context_lines) + "\n" + final
-    
+        return FewShotPrompt(
+            instructions = [],
+            examples = context,
+            test_question = test_question
+        )
     elif strategy == "instruction-1":
         # From https://aclanthology.org/2022.blackboxnlp-1.22.pdf
-        return (
-            f"<s> Here are some examples of converting complicated commands to correct navigation actions." + 
-            f"\n\n" +
-            f"\n\n".join([f"Command: {question}\nActions: {answer}" for (question, answer) in context]) +
-            f"\n\n" +
-            f"Command: {test_question}\n" +
-            f"Actions: "
+        return FewShotPrompt(
+            instructions = ["Here are some examples of converting complicated commands to correct navigation actions."],
+            examples = context,
+            test_question = test_question
         )
-    
     elif strategy == "instruction-2":
         # Variant of instruction-1, but different first sentence
-        return (
-            f"<s> Here are some examples of converting natural language commands to a list of machine actions." + 
-            f"\n\n" +
-            f"\n\n".join([f"Command: {question}\nActions: {answer}" for (question, answer) in context]) +
-            f"\n\n" +
-            f"Command: {test_question}\n" +
-            f"Actions: "
+        return FewShotPrompt(
+            instructions = ["Here are some examples of converting natural language commands to a list of machine actions."],
+            examples = context,
+            test_question = test_question
         )
-    
     elif strategy == "instruction-3":
         # Variant of instruction-1, but adding a more specific prompt asking to solve the problem
-        return (
-            f"<s> Here are some examples of converting complicated commands to correct navigation actions." + 
-            f"\n\n" +
-            f"\n\n".join([f"Command: {question}\nActions: {answer}" for (question, answer) in context]) +
-            f"\n\n" +
-            f"Please convert the following command into a list of machine actions:" +
-            f"\n\n"
-            f"Command: {test_question}\n" +
-            f"Actions: "
+        return FewShotPrompt(
+            instructions = [
+                "Here are some examples of converting complicated commands to correct navigation actions.",
+                "Please convert the following command into a list of machine actions."
+            ],
+            examples = context,
+            test_question = test_question
         )
     
     elif strategy == "chain-of-thought":
-        return (
-            f"<s> Here are some examples of converting complicated commands to correct navigation actions." + 
-            f"\n\n" +
-            f"\n\n".join([f"Command: {question}\nActions: {answer}" for (question, answer) in context]) +
-            f"\n\n" +
-            f"Please convert the following command into a list of machine actions. Think step by step." +
-            f"\n\n" +
-            f"Command: {test_question}\n" +
-            f"Actions: "
+        # "Think step by step" for CoT reasoning
+        return FewShotPrompt(
+            instructions = [
+                "Here are some examples of converting complicated commands to correct navigation actions.",
+                "Please convert the following command into a list of machine actions. Think step by step."
+            ],
+            examples = context,
+            test_question = test_question
         )
 
     else:
@@ -169,13 +218,35 @@ def generate_prompts_json(
         num_prompts = num_prompts, 
         seed = seed)
     
-    with open(output_file / "prompts.json", "w") as f:
-        json.dump(prompts, f)
+    with open(output_folder / "prompts-string.json", "w") as f:
+        result = []
+        for item in prompts:
+            result.append({
+                "prompt": item["prompt"].to_string_format(),
+                "expected_answer": item["expected_answer"]
+            })
+        json.dump(result, f)
+
+    with open(output_folder / "prompts-openai.json", "w") as f:
+        result = []
+        for item in prompts:
+            result.append({
+                "prompt": item["prompt"].to_openai_format(),
+                "expected_answer": item["expected_answer"]
+            })
+        json.dump(result, f)
+
+    with open(output_folder / "prompts-llama.json", "w") as f:
+        result = []
+        for item in prompts:
+            result.append({
+                "prompt": item["prompt"].to_llama_format(),
+                "expected_answer": item["expected_answer"]
+            })
+        json.dump(result, f)
 
 
 def generate_all_prompts_json():
-    
-
     for lang in LANGUAGES:
         for split in SPLITS:
             for strategy in STRATEGIES:
