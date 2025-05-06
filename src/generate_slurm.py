@@ -110,7 +110,9 @@ for model, settings in MODELS.items():
     generate_submit_all_sh(submit_all_sh, slurm_files)
     all_submit_alls.append(submit_all_sh)
 
-with open(Path("scripts") / "generated" / "slurm" / "submit-all-models.sh", "w") as f:
+submit_all_models_sh = Path("scripts") / "generated" / "slurm" / "submit-all-models.sh"
+with open(submit_all_models_sh, "w") as f:
     f.write("#!/bin/bash\n")
     for sh_file in all_submit_alls:
-        f.write(f"{sh_file}\n")
+        f.write(f"{sh_file.absolute()}\n")
+chmodx(submit_all_models_sh)
