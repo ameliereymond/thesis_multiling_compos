@@ -156,9 +156,9 @@ def generate_prompts_json(
         context_size: int, # number of exemplars per prompt
         num_prompts: int,  # number of total prompts
         seed: int,
-        output_file: Path):
+        output_folder: Path):
     
-    os.makedirs(output_file.parent, exist_ok=True)
+    os.makedirs(output_folder, exist_ok=True)
 
     prompts = generate_prompts(
         train_file = train_file,
@@ -169,7 +169,7 @@ def generate_prompts_json(
         num_prompts = num_prompts, 
         seed = seed)
     
-    with open(output_file, "w") as f:
+    with open(output_file / "prompts.json", "w") as f:
         json.dump(prompts, f)
 
 
@@ -195,7 +195,7 @@ def generate_all_prompts_json():
                         context_size = params["context_size"],
                         num_prompts = params["num_prompts"],
                         seed = params["seed"],
-                        output_file = Path("data/output/prompts") / lang / split / strategy / version_name / "prompts.json"
+                        output_folder = Path("data/output/prompts") / lang / split / strategy / version_name
                     )
 
 if __name__ == "__main__":
