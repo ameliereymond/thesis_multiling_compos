@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+from typing import Union
 from huggingface_hub import InferenceApi
 import time
-from transformers import AutoTokenizer, XGLMForCausalLM, GenerationConfig, LlamaTokenizer, LlamaForCausalLM, AutoModelForCausalLM, AutoModelForSeq2SeqLM, BloomForCausalLM
+from transformers import GenerationConfig
 import torch
 import requests
 from accelerate import Accelerator
@@ -10,7 +11,7 @@ accelerator = Accelerator()
 
 class Model(ABC):
     @abstractmethod
-    def infer(self, prompt: str) -> str:
+    def infer(self, prompt_or_messages: Union[str, list]) -> str:
         pass
 
 class RetryStrategy:
@@ -85,6 +86,9 @@ class XGLMLocalModel(Model):
     def __init__(self,
                  model_name: str,
                  generation_config: GenerationConfig = GenerationConfig()):
+
+        from transformers import AutoTokenizer, XGLMForCausalLM
+
         self.device = accelerator.device
         self.model = XGLMForCausalLM.from_pretrained(model_name).to(self.device)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -104,8 +108,11 @@ class LlamaLocalModel(Model):
     def __init__(self,
                  model_name: str,
                  hf_auth_token: str,
-                 generation_config: GenerationConfig):
+                 generation_config: GenerationConfig,
+                 chat_template: bool):
         
+        from transformers import AutoTokenizer, AutoModelForCausalLM
+
         self.device = accelerator.device
 
         self.model = AutoModelForCausalLM.from_pretrained(
@@ -131,19 +138,44 @@ class LlamaLocalModel(Model):
             self.tokenizer.convert_tokens_to_ids("<|eot_id|>")
         ]
 
-    def infer(self, prompt: str) -> str:
-        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
-        outputs = self.model.generate(
-            **inputs,
-            labels=inputs["input_ids"],
-            generation_config=self.generation_config)
+        self.chat_template = chat_template
 
-        return self.tokenizer.decode(outputs.tolist()[0], skip_special_tokens=False)
+    def infer(self, prompt: Union[str, list]) -> str:
+        if self.chat_template:
+            if not isinstance(prompt, list):
+                raise Exception("Expected list for chat template style inference")
+            
+            input_ids = self.tokenizer.apply_chat_template(
+                prompt,
+                add_generation_prompt=True,
+                return_tensors="pt"
+            ).to(self.device)
+
+            outputs = self.model.generate(
+                input_ids,
+                generation_config=self.generation_config
+            )
+
+            response = outputs[0][input_ids.shape[-1]:]
+            return self.tokenizer.decode(response, skip_special_tokens=True)
+
+        else:
+            inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        
+            outputs = self.model.generate(
+                **inputs,
+                labels=inputs["input_ids"],
+                generation_config=self.generation_config)
+
+            return self.tokenizer.decode(outputs.tolist()[0], skip_special_tokens=False)
 
 class BloomzLocalModel(Model):
     def __init__(self,
                  model_name: str,
                  generation_config: GenerationConfig):
+
+        from transformers import AutoTokenizer, AutoModelForCausalLM
+
         self.device = accelerator.device
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, device_map="auto")
         self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto")
@@ -163,11 +195,18 @@ class BloomzLocalModel(Model):
 class AyaLocalModel(Model):
     def __init__(self,
                  model_name: str,
-                 generation_config: GenerationConfig = None):
+                 generation_config: GenerationConfig,
+                 chat_template: bool):
+
+        from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, AutoModelForCausalLM
+
+        self.chat_template = chat_template
         self.device = accelerator.device
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, device_map="auto")
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name, device_map="auto")
-
+        if chat_template:
+            self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto")
+        else:
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name, device_map="auto")
 
         # See https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
 
@@ -183,22 +222,43 @@ class AyaLocalModel(Model):
         else:
             self.generation_config = generation_config
 
-    def infer(self, prompt: str) -> str:
-        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
-        with torch.no_grad():
+
+    def infer(self, prompt: Union[str, list]) -> str:
+        if self.chat_template:
+            if not isinstance(prompt, list):
+                raise Exception("Expected list for chat template style inference")
+            
+            input_ids = self.tokenizer.apply_chat_template(
+                prompt,
+                add_generation_prompt=True,
+                return_tensors="pt"
+            ).to(self.device)
+
             outputs = self.model.generate(
-                **inputs,
-                labels=inputs["input_ids"],
+                input_ids,
                 generation_config=self.generation_config
             )
 
-        return self.tokenizer.decode(outputs.tolist()[0], skip_special_tokens=False)
+            response = outputs[0][input_ids.shape[-1]:]
+            return self.tokenizer.decode(response, skip_special_tokens=True)
+        else:
+            inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+            with torch.no_grad():
+                outputs = self.model.generate(
+                    **inputs,
+                    labels=inputs["input_ids"],
+                    generation_config=self.generation_config
+                )
+            return self.tokenizer.decode(outputs.tolist()[0], skip_special_tokens=False)
 
 
 class BloomLocalModel(Model):
     def __init__(self,
                  model_name: str,
                  generation_config: GenerationConfig):
+
+        from transformers import AutoTokenizer, BloomForCausalLM
+        
         self.device = accelerator.device
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, device_map="auto")
         self.model = BloomForCausalLM.from_pretrained(model_name, device_map="auto")
@@ -214,14 +274,14 @@ class BloomLocalModel(Model):
             )
 
         return self.tokenizer.decode(outputs.tolist()[0], skip_special_tokens=False)
-        
 
-class OpenAIModel(Model):
+
+class OpenAICompletionModel(Model):
     def __init__(self, 
                  model_name: str,
                  api_key: str,
                  retry_strategy: RetryStrategy,
-                 max_output_tokens: int):
+                 max_tokens: int):
         self.api_key = api_key
         self.model_name = model_name
         self.retry_strategy = retry_strategy
@@ -233,66 +293,20 @@ class OpenAIModel(Model):
             "text-davinci-003", "text-curie-001", "curie"
         ])
         
-        chat_completion_style_models = set([
-            "gpt-3.5-turbo-16k-0613", "gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4", "gpt-4-0314",
-            "gpt-3.5-turbo-0613", "gpt-3.5-turbo-0301", "gpt-4-0613"
-        ])
+        if model_name not in completion_style_models:
+            raise Exception(f"Model name '{model_name}' not recognized as completion model")
         
-        if model_name in chat_completion_style_models:
-            self.use_chat_completion = True
-        elif model_name in completion_style_models:
-            self.use_chat_completion = False
-            if max_output_tokens > 20:
-                raise Exception("Are you sure you want such a high max_output_tokens? " +
-                                "This might be expensive. Comment out this exception if you're really certain")
-        else:
-            raise Exception(f"Model name '{model_name}' not recognized")
+        if max_tokens > 20:
+            raise Exception("Are you sure you want such a high max_tokens? " +
+                            "This might be expensive. Comment out this exception if you're really certain")
+            
         
-        self.max_output_tokens = max_output_tokens
+        self.max_tokens = max_tokens
 
     def infer(self, prompt: str) -> str:
         return self.retry_strategy.execute_with_retry(lambda: self.infer_without_retry(prompt))
 
     def infer_without_retry(self, prompt: str) -> str:
-        if self.use_chat_completion:
-            return self.infer_chat_completion_style(prompt)
-        else:
-            return self.infer_completion_style(prompt)
-
-    def infer_chat_completion_style(self, prompt: str) -> str:
-        response = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}"
-            },
-            json = {
-                "model": self.model_name,
-                # The OpenAI default is inf, which is expensive!
-                "max_tokens": self.max_output_tokens,
-                "messages": [
-
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ]
-            }
-        )
-
-        if response.status_code == 200:
-            try:
-                json = response.json()
-                return json["choices"][0]["message"]["content"]
-            except Exception as e:
-                print(e)
-                print(response.text)
-                raise Exception("Error parsing response")
-        else:
-            raise Exception(f"OpenAI returned HTTP {response.status_code} with message {response.json()}")
-        
-
-    def infer_completion_style(self, prompt: str) -> str:
         response = requests.post(
             "https://api.openai.com/v1/completions",
             headers = {
@@ -303,7 +317,7 @@ class OpenAIModel(Model):
                 "model": self.model_name,
                 # The OpenAI default is 16, which is low!
                 # BUT these models tend to be expensive...
-                "max_tokens": self.max_output_tokens,
+                "max_tokens": self.max_tokens,
                 "prompt": prompt
             }
         )
@@ -312,6 +326,60 @@ class OpenAIModel(Model):
             try:
                 json = response.json()
                 return json["choices"][0]["text"]
+            except Exception as e:
+                print(e)
+                print(response.text)
+                raise Exception("Error parsing response")
+        else:
+            raise Exception(f"OpenAI returned HTTP {response.status_code} with message {response.json()}")
+
+
+class OpenAIChatCompletionModel(Model):
+    def __init__(self, 
+                 model_name: str,
+                 api_key: str,
+                 retry_strategy: RetryStrategy,
+                 max_completion_tokens: int):
+        self.api_key = api_key
+        self.model_name = model_name
+        self.retry_strategy = retry_strategy
+        self.max_completion_tokens = max_completion_tokens
+
+        chat_completion_style_models = set([
+            "gpt-3.5-turbo-16k-0613", "gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4", "gpt-4-0314",
+            "gpt-3.5-turbo-0613", "gpt-3.5-turbo-0301", "gpt-4-0613", "o4-mini", "o4-mini-2025-04-16"
+        ])
+        
+        if model_name not in chat_completion_style_models:
+            raise Exception(f"Model name '{model_name}' not recognized")
+        
+    def infer(self, messages: list) -> str:
+        if not isinstance(messages, list):
+            raise Exception(f"Completion chat APIs expected a list, but got {messages}")
+
+        return self.retry_strategy.execute_with_retry(lambda: self.infer_without_retry(messages))
+
+    def infer_without_retry(self, messages: list) -> str:
+        response = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}"
+            },
+            json = {
+                "model": self.model_name,
+                # We must use max_completion_tokens instead of max_tokens,
+                # as max_tokens is deprecated, and not supported in o-series models
+                # See https://platform.openai.com/docs/api-reference/chat/create
+                "max_completion_tokens": self.max_completion_tokens,
+                "messages": messages
+            }
+        )
+
+        if response.status_code == 200:
+            try:
+                json = response.json()
+                return json["choices"][0]["message"]["content"]
             except Exception as e:
                 print(e)
                 print(response.text)

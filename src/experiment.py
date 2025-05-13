@@ -216,12 +216,12 @@ def run_experiment(model: Model,
         expected = item["expected_answer"]
 
         actual = model.infer(prompt)
-
-        scores = compute_scores(expected, actual)
         
         print(f"Prompt:   {prompt}")
         print(f"Got:      {actual}")
         print(f"Expected: {expected}")
+        
+        scores = compute_scores(expected, actual)
         print()
         print(scores)
         print(flush=True)

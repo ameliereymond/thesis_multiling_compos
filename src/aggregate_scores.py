@@ -5,7 +5,7 @@ import csv
 import numpy as np
 from common import MODELS, LANGUAGES, SPLITS, STRATEGIES, VERSIONS
 
-models = ["aya", "bloomz", "bloomz-mt", "bloom", "xglm", "bloom", "llama-3-8B", "llama-3-8B-instruct"]
+models = ["aya", "bloomz", "bloomz-mt", "bloom", "xglm", "bloom", "llama-3-8B", "llama-3-8B-instruct", "o4-mini-2025-04-16"]
 splits = ["mcd1", "mcd2", "mcd3", "add_prim_jump", "add_prim_turn_left", "length_split", "simple"]
 langs = ["en", "fr", "cmn", "hin", "ru"]
 
@@ -137,5 +137,5 @@ def write_csv(lines, output_file: Path):
 if __name__ == "__main__":
     folder = Path("data") / "output" / "results"
 
-    write_csv(get_scores(), folder / "aggregated_scores.csv")
-    write_csv(get_statistics(), folder / "statistics.csv")
+    write_csv(get_scores(), folder / "aggregated_scores_with_openai.csv")
+    write_csv(get_statistics(), folder / "statistics_with_openai.csv")
